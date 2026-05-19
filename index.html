@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GE1808: Wave on a String Simulation</title>
+    <style>
+        :root {
+            --bg-color: #f4f6f9;
+            --card-bg: #ffffff;
+            --primary: #001f3f; /* Professional STI Navy vibe */
+            --accent: #007bff;
+            --text: #333333;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .container {
+            max-width: 900px;
+            width: 100%;
+            background: var(--card-bg);
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        }
+
+        header {
+            text-align: center;
+            border-bottom: 2px solid var(--bg-color);
+            padding-bottom: 15px;
+            margin-bottom: 25px;
+        }
+
+        h1 { margin: 0; color: var(--primary); font-size: 24px; }
+        p.subtitle { margin: 5px 0 0; color: #666; font-size: 14px; }
+
+        .simulation-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+        }
+
+        @media (max-width: 768px) {
+            .simulation-grid { grid-template-columns: 1fr; }
+        }
+
+        .controls-section {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        label { font-weight: 600; color: var(--primary); font-size: 14px; }
+        
+        input[type="range"], input[type="number"], select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            box-sizing: border-box;
+        }
+
+        .visual-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: #111; /* Dark background to make the string pop */
+            border-radius: 8px;
+            padding: 10px;
+            min-height: 250px;
+        }
+
+        canvas {
+            width: 100%;
+            height: 200px;
+            background: #1a1a1a;
+            border-radius: 4px;
+        }
+
+        .output-box {
+            margin-top: 25px;
+            background: var(--primary);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 15px;
+        }
+
+        .output-item { text-align: center; }
+        .output-item div:first-child { font-size: 11px; opacity: 0.8; text-transform: uppercase; letter-spacing: 0.5px; }
+        .output-item div:last-child { font-size: 18px; font-weight: bold; margin-top: 5px; }
+
+        .limit-note {
+            font-size: 11px;
+            color: #666;
+            margin-top: -4px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>Wave on a String Simulation</h1>
+        <p class="subtitle">GE1808 - Mechanical Waves Task Performance</p>
+    </header>
+
+    <div class="simulation-grid">
+        <div class="controls-section">
+            <div class="input-group">
+                <label for="ampInput">Amplitude (A):</label>
+                <input type="number" id="ampInput" value="30" min="5" max="70">
+                <select id="ampUnit">
+                    <option value="cm">Centimeters (cm)</option>
+                    <option value="in">Inches (in)</option>
+                </select>
+                <span class="limit-note">Limits: 5 to 70 cm equivalent</span>
+            </div>
+
+            <div class="input-group">
+                <label for="freqInput">Frequency (f): <span id="freqVal">1.5</span> Hz</label>
+                <input type="range" id="freqInput" min="0.5" max="4.0" step="0.1" value="1.5">
+                <span class="limit-note">Controls how fast the wave oscillates.</span>
+            </div>
+
+            <div class="input-group">
+                <label for="waveInput">Wavelength (λ): <span id="waveVal">150</span> px</label>
+                <input type="range" id="waveInput" min="80" max="300" step="10" value="150">
+                <span class="limit-note">Controls distance between crests.</span>
+            </div>
+        </div>
+
+        <div class="visual-section">
+            <canvas id="waveCanvas"></canvas>
+            <p style="margin-top: 10px; margin-bottom: 5px; font-weight: 600; color: #aaa; font-size: 13px;">
+                Interactive String Environment
+            </p>
+        </div>
+    </div>
+
+    <div class="output-box">
+        <div class="output-item">
+            <div>Amplitude (SI)</div>
+            <div id="ampSI">0.300 m</div>
+        </div>
+        <div class="output-item">
+            <div>Wave Speed (v)</div>
+            <div id="speedSI">0.00 m/s</div>
+        </div>
+        <div class="output-item">
+            <div>Angular Freq (ω)</div>
+            <div id="omegaSI">9.42 rad/s</div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const canvas = document.getElementById('waveCanvas');
+    const ctx = canvas.getContext('2d');
+
+    // UI Controls
+    const ampInput = document.getElementById('ampInput');
+    const ampUnit = document.getElementById('ampUnit');
+    const freqInput = document.getElementById('freqInput');
+    const freqVal = document.getElementById('freqVal');
+    const waveInput = document.getElementById('waveInput');
+    const waveVal = document.getElementById('waveVal');
+
+    // SI Displays
+    const ampSIDisplay = document.getElementById('ampSI');
+    const speedSIDisplay = document.getElementById('speedSI');
+    const omegaSIDisplay = document.getElementById('omegaSI');
+
+    let time = 0;
+
+    // Adjust canvas resolution dynamically
+    function resizeCanvas() {
+        canvas.width = canvas.clientWidth;
+        canvas.height = canvas.clientHeight;
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    function updateSimulation() {
+        // Clear canvas frame
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // Fetch values
+        let rawAmp = parseFloat(ampInput.value) || 20;
+        let frequency = parseFloat(freqInput.value);
+        let wavelength = parseFloat(waveInput.value);
+
+        // Update slider numeric labels
+        freqVal.innerText = frequency.toFixed(1);
+        waveVal.innerText = wavelength;
+
+        // Dynamic Conversions to SI units
+        let ampInMeters = ampUnit.value === 'cm' ? rawAmp * 0.01 : rawAmp * 0.0254;
+        let calculatedSpeed = frequency * (wavelength * 0.01); // Simulated scale factor
+        let angularFreq = 2 * Math.PI * frequency;
+
+        // Render standard math output results to UI
+        ampSIDisplay.innerText = ampInMeters.toFixed(3) + " m";
+        speedSIDisplay.innerText = calculatedSpeed.toFixed(2) + " m/s";
+        omegaSIDisplay.innerText = angularFreq.toFixed(2) + " rad/s";
+
+        // Draw Reference Centerline
+        ctx.strokeStyle = '#333';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(0, canvas.height / 2);
+        ctx.lineTo(canvas.width, canvas.height / 2);
+        ctx.stroke();
+
+        // Draw The Interacting Oscillating Wave String
+        ctx.strokeStyle = '#007bff'; 
+        ctx.lineWidth = 4;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+
+        // Loop through every horizontal pixel column across canvas width
+        for (let x = 0; x < canvas.width; x++) {
+            // Apply y = A * sin(kx - wt) physics formula
+            let k = (2 * Math.PI) / wavelength;
+            let y = rawAmp * Math.sin((k * x) - (angularFreq * time));
+            
+            // Map coordinate relative to vertical center
+            let canvasY = (canvas.height / 2) + y;
+
+            if (x === 0) {
+                ctx.moveTo(x, canvasY);
+            } else {
+                ctx.lineTo(x, canvasY);
+            }
+
+            // Draw a green bead tracking node at the wrench origin node
+            if (x === 15) {
+                ctx.save();
+                ctx.fillStyle = '#28a745';
+                ctx.beginPath();
+                ctx.arc(x, canvasY, 7, 0, 2 * Math.PI);
+                ctx.fill();
+                ctx.restore();
+            }
+        }
+        ctx.stroke();
+
+        // Increment temporal tracking counter variable for spatial animation shifts
+        time += 0.01;
+        requestAnimationFrame(updateSimulation);
+    }
+
+    // Interactive event triggers
+    [ampInput, ampUnit, freqInput, waveInput].forEach(el => {
+        el.addEventListener('input', () => {});
+    });
+
+    // Fire animation loops immediately
+    requestAnimationFrame(updateSimulation);
+</script>
+
+</body>
+</html>
